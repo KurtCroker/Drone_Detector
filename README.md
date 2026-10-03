@@ -1,4 +1,4 @@
-PASSIVE SDR DRONE/RF DETECTOR AND DIRECTION TRACKER
+Passive SDR based drome tracker
 
 The Python program runs on the computer.
 The Arduino firmware runs on the Arduino.
