@@ -1,157 +1,245 @@
-#SDR Drone Detector and Tracker
+PASSIVE SDR DRONE/RF DETECTOR AND DIRECTION TRACKER
 
-This is a project I’m working on to detect and track RF signals using an SDR and a directional antenna. The main idea is to rotate the antenna, measure signal strength at different angles, and estimate what direction the strongest signal is coming from.
+The Python program runs on the computer.
+The Arduino firmware runs on the Arduino.
 
-I’m using Python for the SDR signal processing and an Arduino to control the antenna rotation.
 
-How It Works
+PROJECT LAYOUT
 
-The system is split into two main parts.
+passive_drone_rf_tracker/
 
-The computer controls the SDR and processes the RF signal using Python. The Arduino controls a stepper motor that rotates the directional antenna.
-
-The basic process is:
-
-1. Python tells the Arduino what angle to move the antenna to.
-2. The Arduino rotates the antenna using a stepper motor.
-3. The Arduino tells Python when it reaches the angle.
-4. The SDR collects IQ samples.
-5. Python uses an FFT to measure the signal strength around the selected frequency.
-6. The process repeats at different angles.
-7. Python compares the measurements and estimates the direction the RF signal is coming from.
-
-The system first performs a larger scan and then performs a smaller scan around the strongest direction to get a more accurate bearing.
-
-#Hardware
-
-Nooelec NESDR SMArt v5
-Arduino Uno/Nano
-NEMA 17 stepper motor
-A4988 stepper motor driver
-Directional antenna
-Limit switch for homing
-External stepper motor power supply
-Laptop running Python
-
-#Software
-
-Python
-Arduino C/C++
-NumPy
-PySerial
-pyrtlsdr
-Matplotlib
-
-Python handles most of the signal processing because it is easier to work with SDR data, FFTs, plotting, and data collection.
-
-The Arduino is mainly used for controlling the stepper motor and keeping track of the antenna position.
-
-#Project Structure
-
-drone_rf_tracker/
-
-config.json
+README.txt
+WIRING.txt
 requirements.txt
 
-host/
-tracker.py
-receiver.py
-rotor.py
-signal_processing.py
+python/
+    config.py
+    tracker.py
+    dsp.py
+    sdr_device.py
+    arduino_link.py
 
 arduino/
-rotor_controller/
-rotor_controller.ino
+    rotor_controller/
+        rotor_controller.ino
+
+diagnostics/
+    list_serial_ports.py
+    test_arduino_link.py
+    test_sdr.py
 
 tests/
-test_bearing.py
+    test_project.py
 
-Arduino Communication
 
-The computer communicates with the Arduino through USB serial.
+WHAT EACH PART DOES
 
-For example, Python can send:
+Python:
+
+config.py
+Stores all settings.
+
+tracker.py
+Main program. Coordinates the Arduino and SDR, scans the antenna, estimates
+bearing, logs results, and creates a polar plot.
+
+dsp.py
+FFT/power calculations and bearing estimation.
+
+sdr_device.py
+Reads IQ samples from the RTL-SDR. Also contains a simulator.
+
+arduino_link.py
+Communicates with the Arduino through USB serial.
+
+Arduino:
+
+rotor_controller.ino
+Controls the stepper motor, home switch, and antenna angle.
+
+
+HOW THE SYSTEM COMMUNICATES
+
+Computer
+    |
+    |---- USB ---- Arduino ---- motor driver ---- stepper motor
+    |
+    |---- USB ---- RTL-SDR ---- directional antenna
+
+Python sends commands to the Arduino such as:
+
+PING
+
+Arduino replies:
+
+PONG
+
+Python sends:
 
 GOTO:90
 
-The Arduino rotates the antenna to 90 degrees and responds with:
+Arduino moves the rotor and replies:
 
 DONE:90.00
 
-Python waits for this response before taking an SDR measurement so the antenna is not moving while data is being collected.
+Python waits for DONE before collecting the SDR measurement.
 
-#Signal Processing
 
-The SDR produces IQ samples.
+#BEFORE USING HARDWARE
 
-Python performs an FFT on the samples to convert the data from the time domain into the frequency domain.
+1. Read WIRING.txt.
 
-The program then measures the relative signal power around the selected frequency.
+2. Upload:
 
-Example:
+arduino/rotor_controller/rotor_controller.ino
 
-Angle    Signal Strength
+to the Arduino.
 
-0 degrees     -71 dB
-30 degrees    -68 dB
-60 degrees    -54 dB
-70 degrees    -45 dB
-80 degrees    -48 dB
-90 degrees    -57 dB
-
-In this example the strongest signal is coming from around 70 degrees.
-
-The program also uses nearby measurements around the strongest signal to calculate a more accurate estimated bearing.
-
-#Running the Project
-
-Install the Python dependencies:
+3. Install Python packages:
 
 pip install -r requirements.txt
 
-The program can be tested without the SDR or Arduino using the built-in simulation:
+4. Find your Arduino serial port:
 
-python host/tracker.py --simulate
+python diagnostics/list_serial_ports.py
 
-The simulation creates a fake RF source so the direction-finding code can be tested before connecting the hardware.
+5. Edit:
 
-To use the real hardware, change the Arduino COM port in config.json.
+python/config.py
 
-Example:
+and change:
 
-"serial_port": "COM4"
+SERIAL_PORT = "COM4"
 
-The Arduino COM port can be found in the Arduino IDE under:
+to your actual port.
 
-Tools > Port
+
+SOFTWARE-ONLY TEST
+
+Run:
+
+python tests/test_project.py
+
+Then run the full simulated tracker:
+
+python python/tracker.py --simulate
+
+The simulated transmitter is at 73 degrees.
+The tracker should estimate a bearing close to 73 degrees.
+
+
+ARDUINO COMMUNICATION TEST
+
+This test will not move the motor.
+
+Run:
+
+python diagnostics/test_arduino_link.py
+
+Expected result:
+
+PASS: Arduino replied PONG.
+
+
+SDR TEST
+
+Run:
+
+python diagnostics/test_sdr.py
+
+It should print five relative power measurements.
+
+
+FULL HARDWARE TEST
+
+Make sure the antenna rotor can safely rotate and that the cable has enough
+slack.
 
 Then run:
 
-python host/tracker.py
+python python/tracker.py
 
-Current Limitations
+The program will:
 
-The NESDR Smart v5 does not cover the common 2.4 GHz and 5 GHz frequency ranges.
+1. Ping the Arduino.
+2. Home the rotor.
+3. Scan 0 to 350 degrees in 10 degree increments.
+4. Measure SDR power at each direction.
+5. Estimate the strongest bearing.
+6. If the peak is strong enough, scan around it again in 2 degree increments.
+7. Save a CSV log.
+8. Save a polar direction plot.
+9. Return the rotor to 0 degrees.
 
-Because of this, the current version is mainly being used to develop and test the direction-finding system, antenna rotation, signal processing, and tracking algorithms.
 
-The current system detects RF energy on a selected frequency. It does not automatically identify every detected RF signal as a drone.
+SETTINGS
 
-Future Plans
+All settings are in:
 
-SDR hardware capable of receiving 2.4 GHz and 5 GHz
-2.4 GHz and 5 GHz directional antennas
-Remote ID detection
-Live tracking instead of individual scans
-Compass/IMU for absolute heading
-Better antenna mount and enclosure
-Multiple receiving stations for triangulation
-Testing at different distances and angles
-Calculating average bearing error
-GUI for signal strength and direction
+python/config.py
 
-Goal
+Important settings:
 
-The main goal of this project is to combine RF, SDR signal processing, embedded systems, programming, and mechanical design into one system.
+SERIAL_PORT = "COM4"
 
-I also want to collect actual test data and measure how accurate the direction-finding system is instead of only showing that it works.
+TARGET_FREQUENCY_HZ = 915_000_000
+
+SDR_GAIN_DB = 35.0
+
+COARSE_STEP_DEG = 10.0
+
+FINE_STEP_DEG = 2.0
+
+DETECTION_PROMINENCE_DB = 6.0
+
+
+MOTOR DRIVER:
+DRV8825
+
+
+The default firmware assumes:
+
+200 full steps per motor revolution
+1/16 microstepping
+1:1 direct drive
+
+you can change these values on top of rotor_controller.ino if your setup is
+different.
+
+
+OUTPUT FILES
+
+rf_scan_log.csv
+
+Contains:
+timestamp
+scan type
+antenna angle
+relative RF power
+estimated bearing
+peak prominence
+detection state
+
+latest_scan.png
+
+Polar plot of signal strength versus antenna direction.
+
+
+FIRST TEST
+
+
+Used a known test transmitter or other known RF source at a frequency
+your SDR can receive.
+
+Put it at a known bearing.
+
+Run the scan.
+
+Compare:
+
+known bearing
+estimated bearing
+
+Repeat at several angles and distances.
+
+That gives actual bearing-error measurements
