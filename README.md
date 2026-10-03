@@ -4,7 +4,7 @@ The Python program runs on the computer.
 The Arduino firmware runs on the Arduino.
 
 
-PROJECT LAYOUT
+#project layout
 
 passive_drone_rf_tracker/
 
@@ -32,7 +32,7 @@ tests/
     test_project.py
 
 
-WHAT EACH PART DOES
+#What each part does
 
 Python:
 
@@ -58,7 +58,7 @@ rotor_controller.ino
 Controls the stepper motor, home switch, and antenna angle.
 
 
-HOW THE SYSTEM COMMUNICATES
+#how the system communicates
 
 Computer
     |
@@ -82,10 +82,10 @@ Arduino moves the rotor and replies:
 
 DONE:90.00
 
-Python waits for DONE before collecting the SDR measurement.
+Python waits for done before collecting the SDR measurement.
 
 
-#BEFORE USING HARDWARE
+#before using hardware
 
 1. Read WIRING.txt.
 
@@ -128,7 +128,7 @@ The simulated transmitter is at 73 degrees.
 The tracker should estimate a bearing close to 73 degrees.
 
 
-ARDUINO COMMUNICATION TEST
+#arduino communication test
 
 This test will not move the motor.
 
