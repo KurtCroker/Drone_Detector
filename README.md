@@ -1,245 +1,96 @@
-Passive SDR based drome tracker
+SDR Drone / RF Tracker
 
-The Python program runs on the computer.
-The Arduino firmware runs on the Arduino.
+This is a project I made to use an SDR and Arduino to find what direction an RF signal is coming from.
 
+The antenna is mounted to a stepper motor. The Arduino moves the antenna and Python reads the signal strength from the SDR.
 
-#project layout
+The program checks the signal at different angles and prints the angle with the strongest signal.
 
-passive_drone_rf_tracker/
+Files
 
-README.txt
-WIRING.txt
+main.py
+Main Python program.
+
+settings.py
+Basic settings like COM port, frequency, and scan angle.
+
+arduino/rotor_controller.ino
+Arduino code for moving the stepper motor.
+
 requirements.txt
+Python libraries needed.
 
-python/
-    config.py
-    tracker.py
-    dsp.py
-    sdr_device.py
-    arduino_link.py
+Hardware
 
-arduino/
-    rotor_controller/
-        rotor_controller.ino
+Arduino
+RTL-SDR
+Stepper motor
+Stepper motor driver
+Directional antenna
+Limit switch
 
-diagnostics/
-    list_serial_ports.py
-    test_arduino_link.py
-    test_sdr.py
+Basic Wiring
 
-tests/
-    test_project.py
+Arduino D2 -> stepper driver STEP
+Arduino D3 -> stepper driver DIR
+Arduino D7 -> limit switch
 
+The stepper motor should use its own power supply through the motor driver.
 
-#What each part does
+Do not power the stepper directly from the Arduino.
 
-Python:
+How It Works
 
-config.py
-Stores all settings.
+1. Python tells the Arduino to home the antenna.
 
-tracker.py
-Main program. Coordinates the Arduino and SDR, scans the antenna, estimates
-bearing, logs results, and creates a polar plot.
+2. Python tells the Arduino to move to an angle.
 
-dsp.py
-FFT/power calculations and bearing estimation.
+3. The Arduino moves the stepper.
 
-sdr_device.py
-Reads IQ samples from the RTL-SDR. Also contains a simulator.
+4. Python reads samples from the SDR.
 
-arduino_link.py
-Communicates with the Arduino through USB serial.
+5. Python calculates the signal power.
 
-Arduino:
+6. The antenna moves to the next angle.
 
-rotor_controller.ino
-Controls the stepper motor, home switch, and antenna angle.
+7. At the end, Python prints the angle with the strongest signal.
 
-
-#how the system communicates
-
-Computer
-    |
-    |---- USB ---- Arduino ---- motor driver ---- stepper motor
-    |
-    |---- USB ---- RTL-SDR ---- directional antenna
-
-Python sends commands to the Arduino such as:
-
-PING
-
-Arduino replies:
-
-PONG
-
-Python sends:
-
-GOTO:90
-
-Arduino moves the rotor and replies:
-
-DONE:90.00
-
-Python waits for done before collecting the SDR measurement.
-
-
-#before using hardware
-
-1. Read WIRING.txt.
-
-2. Upload:
-
-arduino/rotor_controller/rotor_controller.ino
-
-to the Arduino.
-
-3. Install Python packages:
+Install
 
 pip install -r requirements.txt
 
-4. Find your Arduino serial port:
+Find the Arduino COM port and put it in settings.py.
 
-python diagnostics/list_serial_ports.py
+Example:
 
-5. Edit:
+ARDUINO_PORT = "COM4"
 
-python/config.py
-
-and change:
-
-SERIAL_PORT = "COM4"
-
-to your actual port.
-
-
-SOFTWARE-ONLY TEST
+Testing Without Hardware
 
 Run:
 
-python tests/test_project.py
+python main.py --simulate
 
-Then run the full simulated tracker:
+The fake signal is around 70 degrees.
 
-python python/tracker.py --simulate
+Running With Hardware
 
-The simulated transmitter is at 73 degrees.
-The tracker should estimate a bearing close to 73 degrees.
+Upload:
 
+arduino/rotor_controller.ino
 
-#arduino communication test
-
-This test will not move the motor.
-
-Run:
-
-python diagnostics/test_arduino_link.py
-
-Expected result:
-
-PASS: Arduino replied PONG.
-
-
-SDR TEST
-
-Run:
-
-python diagnostics/test_sdr.py
-
-It should print five relative power measurements.
-
-
-FULL HARDWARE TEST
-
-Make sure the antenna rotor can safely rotate and that the cable has enough
-slack.
+to the Arduino.
 
 Then run:
 
-python python/tracker.py
+python main.py
 
-The program will:
+Notes
 
-1. Ping the Arduino.
-2. Home the rotor.
-3. Scan 0 to 350 degrees in 10 degree increments.
-4. Measure SDR power at each direction.
-5. Estimate the strongest bearing.
-6. If the peak is strong enough, scan around it again in 2 degree increments.
-7. Save a CSV log.
-8. Save a polar direction plot.
-9. Return the rotor to 0 degrees.
+The default frequency is 915 MHz.
 
+Change this in settings.py if needed.
 
-SETTINGS
+This program only measures RF signal strength and direction.
 
-All settings are in:
-
-python/config.py
-
-Important settings:
-
-SERIAL_PORT = "COM4"
-
-TARGET_FREQUENCY_HZ = 915_000_000
-
-SDR_GAIN_DB = 35.0
-
-COARSE_STEP_DEG = 10.0
-
-FINE_STEP_DEG = 2.0
-
-DETECTION_PROMINENCE_DB = 6.0
-
-
-MOTOR DRIVER:
-DRV8825
-
-
-The default firmware assumes:
-
-200 full steps per motor revolution
-1/16 microstepping
-1:1 direct drive
-
-you can change these values on top of rotor_controller.ino if your setup is
-different.
-
-
-OUTPUT FILES
-
-rf_scan_log.csv
-
-Contains:
-timestamp
-scan type
-antenna angle
-relative RF power
-estimated bearing
-peak prominence
-detection state
-
-latest_scan.png
-
-Polar plot of signal strength versus antenna direction.
-
-
-FIRST TEST
-
-
-Used a known test transmitter or other known RF source at a frequency
-your SDR can receive.
-
-Put it at a known bearing.
-
-Run the scan.
-
-Compare:
-
-known bearing
-estimated bearing
-
-Repeat at several angles and distances.
-
-That gives actual bearing-error measurements
+It does not automatically know whether the signal is actually coming from a drone.
