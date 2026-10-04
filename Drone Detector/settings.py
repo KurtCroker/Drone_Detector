@@ -1,4 +1,4 @@
-# Basic project settings
+# settings
 
 ARDUINO_PORT = "COM4"
 BAUD_RATE = 115200
