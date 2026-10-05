@@ -71,7 +71,7 @@ Run:
 
 python main.py --simulate
 
-The fake signal is around 70 degrees.
+The test signal is around 70 degrees.
 
 Running With Hardware
 
