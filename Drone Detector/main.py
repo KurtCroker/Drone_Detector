@@ -80,7 +80,7 @@ class SDR:
 
 class FakeMotor:
     def home(self):
-        print("fake motor homed")
+        print("practice motor homed")
 
     def move_to(self, angle):
         print(f"moving to {angle} degrees")
